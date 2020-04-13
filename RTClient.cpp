@@ -2,6 +2,7 @@
 //
 #include "RTClient.h"
 #include "RTManager.h"
+#include "DataSocket.h"
 #include <iostream>
 #include <boost/format.hpp>
 #include <boost/endian/conversion.hpp>
@@ -25,6 +26,23 @@ CClientSocket::~CClientSocket()
 {
 }
 
+void CClientSocket::Link()
+{
+	m_pSocket = new CDataSocket(this);
+	m_pSocket->SetHost("127.0.0.1", m_pClient->GetDataPort());
+	m_pSocket->Connect();
+	m_pSocket->Start();
+}
+
+void CClientSocket::Unlink()
+{
+	if (m_pSocket != NULL) {
+		m_pSocket->Finish();
+		delete m_pSocket;
+		m_pSocket = NULL;
+	}
+}
+
 void CClientSocket::Close()
 {
 	cout << str(format("Client Socket[%x] %s is closed") % this % m_sRemoteIP) << endl;
@@ -37,11 +55,11 @@ bool CClientSocket::OnParsing()
 		return true;
 	}
 
-	if (m_pClient != NULL) {
+	if (m_pSocket != NULL) {
 		bool dump = false;
 		if (m_nBufSize > DUMP_SIZE)
 			cout << "f: " << (dump ? string(m_readBuf, m_nBufSize) : to_string(m_nBufSize)) << endl;
-		m_pClient->FromData(m_readBuf, m_nBufSize);
+		m_pSocket->SendRequest(m_readBuf, m_nBufSize);
 	}
 
 	m_nBufSize = 0;
@@ -52,16 +70,17 @@ bool CClientSocket::OnParsing()
 //////////////////////////////////////////////////////////////////////////////////////
 //
 
-CRealtimeClient::CRealtimeClient(CRealtimeManager* mgr, tcp::endpoint& accept_endpoint)
+CRealtimeClient::CRealtimeClient(CRealtimeManager* mgr, tcp::endpoint& accept_endpoint, int to_port)
 : CSocketThdObj(SOCK_RECVCHK), m_acceptor(m_ios, accept_endpoint)
 {
 	m_pRTMgr = mgr;
+	m_nDataPort = to_port;
 }
 
 CRealtimeClient::~CRealtimeClient()
 {
 }
-
+/*
 bool CRealtimeClient::FromData(const char* sFrame, int nFrame)
 {
 	if (m_pRTMgr != NULL) {
@@ -79,7 +98,7 @@ bool CRealtimeClient::ToData(const char* sFrame, int nFrame)
 	}
 	return true;
 }
-
+*/
 void CRealtimeClient::AsyncAccept()
 {
 	CClientSocket* client = new CClientSocket(this);
@@ -104,7 +123,8 @@ bool CRealtimeClient::AddClient(CClientSocket* client)
 	{
 		if (client->Create()) {
 			client->SetRemoteIP();
-			client->Start();
+			client->Link();
+			//client->Start();
 			m_arClient.push_back(client);
 			cout << str(format("Add Client Socket[%x] %s") % client % client->GetRemoteIP()) << endl;
 			return true;
@@ -123,6 +143,7 @@ void CRealtimeClient::OnClearProc()
 		CClientSocket* client = (CClientSocket*)m_arClient.at(i);
 		if (client != NULL)
 		{
+			client->Unlink();
 			client->Finish();
 			client->Close();
 			delete client;

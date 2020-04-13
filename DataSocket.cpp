@@ -1,7 +1,7 @@
 // DataSocket.cpp
 //
 #include "DataSocket.h"
-#include "RTManager.h"
+#include "RTClient.h"
 #include <iostream>
 #include <boost/locale.hpp>
 #include <boost/format.hpp>
@@ -19,10 +19,10 @@ using boost::format;
 //////////////////////////////////////////////////////////////////////////////////////
 //
 
-CDataSocket::CDataSocket(CRealtimeManager* mgr)
+CDataSocket::CDataSocket(CClientSocket* client)
 : CSocketObj(m_ios)
 {
-	m_pRTMgr = mgr;
+	m_pClient = client;
 }
 
 CDataSocket::~CDataSocket()
@@ -33,7 +33,12 @@ CDataSocket::~CDataSocket()
 bool CDataSocket::Create()
 {
 	cout << "Data Socket is connected" << endl;
-	return __super::Create();
+	bool ret = __super::Create();
+	if (m_pClient != NULL) {
+		m_pClient->Start();
+		return ret;
+	}
+	return false;
 }
 
 void CDataSocket::Close()
@@ -48,11 +53,11 @@ bool CDataSocket::OnParsing()
 		return true;
 	}
 
-	if (m_pRTMgr != NULL) {
+	if (m_pClient != NULL) {
 		bool dump = false;
 		if (m_nBufSize > DUMP_SIZE)
 			cout << "t: " << (dump ? string(m_readBuf, m_nBufSize) : to_string(m_nBufSize)) << endl;
-		m_pRTMgr->ToData(m_readBuf, m_nBufSize);
+		m_pClient->SendRequest(m_readBuf, m_nBufSize);
 	}
 
 	m_nBufSize = 0;

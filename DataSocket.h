@@ -6,12 +6,12 @@
 
 #define MAX_BUFSIZE		32768
 
-class CRealtimeManager;
+class CClientSocket;
 
 class CDataSocket : public CSocketObj
 {
 public:
-	CDataSocket(CRealtimeManager* mgr);
+	CDataSocket(CClientSocket* client);
 	~CDataSocket();
 
 	bool Create();
@@ -19,5 +19,5 @@ public:
 	bool OnParsing();
 
 private:
-	CRealtimeManager* m_pRTMgr;
+	CClientSocket* m_pClient;
 };

@@ -14,10 +14,10 @@ public:
 	void Start();
 	void Finish();
 
-	bool FromData(const char* sFrame, int nFrame);
-	bool ToData(const char* sFrame, int nFrame);
+	//bool FromData(const char* sFrame, int nFrame);
+	//bool ToData(const char* sFrame, int nFrame);
 
 private:
-	CDataSocket* m_pSocket;
+	//CDataSocket* m_pSocket;
 	CRealtimeClient* m_pRTClient;
 };
